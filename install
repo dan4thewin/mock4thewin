@@ -1,0 +1,31 @@
+#!/bin/bash -e
+
+if [[ $# != 1 ]]; then
+    exec >&2
+    echo "usage: $0 <destination-directory>"
+    echo
+    echo "example: $0 /usr/local"
+    exit 1
+fi
+PREFIX=$1
+
+tmp=$(mktemp)
+trap "rm -f $tmp" EXIT
+
+sed "/^prefix *=.*/s,,prefix = $PREFIX," include/Mock4thewin.mk > $tmp
+install -DT -m 664 $tmp "$PREFIX"/include/Mock4thewin.mk
+
+install -D -m 775 -t "$PREFIX"/bin bin/unit-test-report
+install -D -m 664 -t "$PREFIX"/include \
+    include/Mock4thewin-template.mk include/tap.h
+
+url=https://github.com/dan4thewin/ctags-xref
+for d in ctags-xref show-source; do
+    hash $d || echo "$d not found; try installing from $url" >&2
+done
+
+for d in make gcc gcov grep egrep head tail cut sed tr cp ln rm; do
+    hash $d || echo "$d not found; please check PATH and installed packages." >&2
+done
+
+make -f "$PREFIX/include/Mock4thewin.mk" help

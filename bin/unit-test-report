@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# This script runs unit test programs and analyzes them with gcov to produce a report.
+# This report assumes each unit test program covers a single function, and is named
+# with the function name optionally preceded by "test-".  The unit test programs must
+# exit 0 when all tests pass, and be compiled with coverage flags.
+#
+# For example:
+#
+# $ ls *.c
+# test-taskPoolCreateJob.c             test-taskPoolScheduleDeferred.c  test-taskPoolWorker.c
+# test-taskPoolCreateSystemTaskPool.c  test-taskPoolTryCancel.c         test-timerCallback.c
+# $ make build
+# cc -Wall -fprofile-arcs -ftest-coverage -O0 -ggdb test-timerCallback.c -o test-timerCallback
+# [...]
+# $ unit-test-report test*
+# FUNCTION                                UNIT TESTS     LINES EXECUTED      BRANCHES TAKEN
+# taskPoolCreateJob                       PASSED         100.00% of 9        100.00% of 6
+# taskPoolCreateSystemTaskPool            PASSED         100.00% of 15       100.00% of 10
+# taskPoolScheduleDeferred                PASSED         100.00% of 22       100.00% of 20
+# taskPoolTryCancel                       PASSED         100.00% of 17       100.00% of 16
+# taskPoolWorker                          PASSED         100.00% of 7        100.00% of 6
+# timerCallback                           PASSED         100.00% of 11       100.00% of 16
+
+if [[ ! $1 ]]; then
+    exec >&2
+    echo "usage: ${0##*/} <unit-test>..."
+    echo -e "\n\tFor more information, see https://git.io/foobar \n"
+    exit 1
+fi
+
+if [[ $* = */* ]]; then
+    exec >&2
+    echo "${0##*/} must be run in the same directory as the test program"
+    exit 1
+fi
+
+fmt='%-40s%-15s%-20s%s\n'
+printf $fmt "FUNCTION" "UNIT TESTS" "LINES EXECUTED" "BRANCHES TAKEN"
+
+# Change word splitting to only use newlines.
+# This makes it easier to use the gcov output.
+IFS=$'\n'
+
+# sample gcov output:
+#
+# Function 'timerCallback'
+# Lines executed:100.00% of 11
+# Branches executed:100.00% of 16
+# Taken at least once:100.00% of 16
+# No calls
+#
+
+declare -i fail_count=0
+
+for unit_test in "$@"; do
+    # Skip any files that are not executable.
+    # For example, test* matches .c files and unit tests, so skip the .c files. 
+    [[ -x $unit_test ]] || continue
+
+    # Run the unit test.
+    result=FAILED
+    ./$unit_test >&- 2>&- && result=PASSED || let fail_count++
+
+    # Run gcov and capture the output relating to the desired function.
+    func_name=${unit_test#test-}
+    [[ -f $unit_test.gcno ]] && \
+        set -- `gcov -b -f $unit_test | sed -nr "/^Function '$func_name'/,/^$/p"`
+
+    # Print a report record.
+    printf $fmt "$func_name" "$result" "${2#*:}" "${4#*:}"
+
+    # Display any source lines that were not traversed.
+    [[ -f $unit_test.c.gcov ]] && egrep -B2 -A2 '#{5}' $func_name.c.gcov
+done
+
+exit $fail_count
