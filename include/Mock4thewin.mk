@@ -12,7 +12,6 @@ help:
 # a default Makefile that includes this one.
 #
 symlinks = Mock4thewin.mk tap.h
-export 
 
 setup: Makefile $(symlinks)
 
