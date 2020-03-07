@@ -22,6 +22,11 @@ some unit tests, and finally run:
 
     make test
 
+The above reports branch coverage using `gcov`.  To see
+an annotated copy of the source with branch coverage run:
+
+    make lcov
+
 Note: This project requires tools from
 https://github.com/dan4thewin/ctags-xref .
 Please build and install those tools first.

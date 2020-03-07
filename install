@@ -15,7 +15,8 @@ trap "rm -f $tmp" EXIT
 sed "/^prefix *=.*/s,,prefix = $PREFIX," include/Mock4thewin.mk > $tmp
 install -DT -m 664 $tmp "$PREFIX"/include/Mock4thewin.mk
 
-install -D -m 775 -t "$PREFIX"/bin bin/unit-test-report
+install -D -m 775 -t "$PREFIX"/bin \
+    bin/stitch-cov bin/unit-test-report
 install -D -m 664 -t "$PREFIX"/include \
     include/Mock4thewin-template.mk include/tap.h
 

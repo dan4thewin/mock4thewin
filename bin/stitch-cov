@@ -1,0 +1,58 @@
+#!/usr/bin/perl
+
+# This script postprocesses the coverage info from lcov, mapping functions
+# and line numbers back to the original source files and lines.  This is
+# helpful when individual functions have been extracted and tested in isolation
+# (i.e., by using show-source).
+# N.B., mapping requires an index produced by ctags-xref.
+#
+# $ lcov --rc lcov_branch_coverage=1 -c -d . -o - 2>&- | stitch-cov index > cov.info
+#
+
+use strict;
+use warnings;
+use Cwd 'realpath';
+
+@ARGV == 0 and die "usage: $0 <index_file> [<coverage.info>...]\n";
+
+# make a lookup table of functions, line numbers, and file names from the index
+my %lno_idx;  # line number index
+my %fnm_idx;  # file name index
+
+open(FH, $ARGV[0]) or die "$!\n";
+shift;
+while (<FH>) {
+    my ($name, $type, $lineno, $file) = split '\s+';
+    if ($type eq 'function') {
+        $lno_idx{$name} = $lineno;
+        $fnm_idx{$name} = realpath($file);
+    }
+}
+
+# with the remaining files, read in each multi-line record and update the
+# values using the index
+
+$/ = "end_of_record\n";
+while (<>) {
+    my ($lineno, $fn) = m/^FN:(\d+),(\w+)$/m or die "Bad record\n";
+
+    # skip records for main()
+    $fn eq 'main' and next;
+
+    warn("function $fn not found in index\n"), next unless $lno_idx{$fn};
+
+    # change file name to original
+    s/^SF:.*$/SF:$fnm_idx{$fn}/m;
+
+    # calculate offset
+    my $offset = $lno_idx{$fn} - $lineno;
+
+    # fix line numbers
+    for my $k (qw/FN BRDA DA/) {
+        s/^$k:\K(\d+)/$1 + $offset/mge;
+    }
+
+    print;
+}
+
+exit 0

@@ -31,13 +31,20 @@ temp_src = $(patsubst %,%.c,$(FUNCTIONS))
 
 build: $(TESTS)
 
-test: clean-gcov build
+test: clean-gcov clean-lcov build
 	unit-test-report $(TESTS)
 
 clean-gcov:
 	rm -f *.gcov
 
-clean:
+lcov: test
+	lcov --rc lcov_branch_coverage=1 -c -d . -o - 2>&- | stitch-cov index > cov.info
+	genhtml -s --branch-coverage cov.info -o html
+
+clean-lcov:
+	rm -fr cov.info html
+
+clean: clean-gcov clean-lcov
 	rm -f index $(TESTS) $(temp_src) *.gc??
 
 index: $(or $(SOURCE), ..) Makefile
@@ -51,4 +58,4 @@ CFLAGS_DFLT = -std=c99 -Wall -O0 -ggdb
 $(TESTS): test-%: test-%.c %.c tap.h
 	$(CC) --coverage $(or $(CFLAGS), $(CFLAGS_DFLT)) $(INCLUDE:%=-I%) $< -o $@
 
-.PHONY: help setup build test clean-gcov clean
+.PHONY: help setup build test clean-gcov lcov clean-lcov clean
