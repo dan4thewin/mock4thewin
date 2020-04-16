@@ -40,4 +40,5 @@ https://github.com/dan4thewin/ctags-xref .
 Please build and install those tools first.
 
 Note: This project expects a gcc toolchain on
-a modern Linux distribution.
+a modern Linux distribution or on Windows
+Subsystem for Linux.
