@@ -20,11 +20,14 @@
 # Values based on test source file names will be dynamically added.
 #FUNCTIONS = a_private_func
 
+# additional header dependencies for all tests
+#COMMON = common.h
+
 # Changes to the above variables should remain above this include.
 include Mock4thewin.mk
 
 # additional dependencies for all tests
-#$(TESTS): common.h
+#$(TESTS): foo.o
 
 # additional dependency for a specific test
 #api_func.c: a_private_func.c

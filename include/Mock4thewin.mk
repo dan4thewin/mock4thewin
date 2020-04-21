@@ -26,8 +26,14 @@ Makefile:
 #
 TESTS += $(patsubst %.c,%,$(wildcard test-*.c))
 FUNCTIONS += $(patsubst test-%,%,$(TESTS))
+COMMON += tap.h
 
 temp_src = $(patsubst %,%.c,$(FUNCTIONS))
+test_obj = $(patsubst %,%.o,$(TESTS))
+
+CFLAGS_DFLT = -std=c99 -Wall -O0 -ggdb
+CFLAGS := --coverage $(or $(CFLAGS), $(CFLAGS_DFLT)) $(INCLUDE:%=-I%)
+LDFLAGS += --coverage
 
 build: $(TESTS)
 
@@ -45,7 +51,7 @@ clean-lcov:
 	rm -fr cov.info html
 
 clean: clean-gcov clean-lcov
-	rm -f index $(TESTS) $(temp_src) *.gc??
+	rm -f index $(TESTS) $(temp_src) *.o *.gc??
 
 index: $(or $(SOURCE), ..) Makefile
 	ctags-xref -R $< > $@
@@ -53,9 +59,6 @@ index: $(or $(SOURCE), ..) Makefile
 $(temp_src): index
 	show-source $(patsubst %.c,%,$@) > $@
 
-CFLAGS_DFLT = -std=c99 -Wall -O0 -ggdb
-
-$(TESTS): test-%: test-%.c %.c tap.h
-	$(CC) --coverage $(or $(CFLAGS), $(CFLAGS_DFLT)) $(INCLUDE:%=-I%) $< -o $@
+$(test_obj): test-%.o: test-%.c %.c $(COMMON)
 
 .PHONY: help setup build test clean-gcov lcov clean-lcov clean
